@@ -1,0 +1,159 @@
+name: insightquery-new
+
+services:
+  sandbox-image:
+    image: ${SANDBOX_IMAGE:-insightquery-sandbox:latest}
+    build:
+      context: ./sandbox
+      network: host
+      args:
+        APT_MIRROR: ${SANDBOX_APT_MIRROR:-https://mirrors.aliyun.com/debian}
+        APT_SECURITY_MIRROR: ${SANDBOX_APT_SECURITY_MIRROR:-https://mirrors.aliyun.com/debian-security}
+        PYPI_INDEX_URL: ${SANDBOX_PYPI_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple}
+        NPM_REGISTRY: ${SANDBOX_NPM_REGISTRY:-https://registry.npmmirror.com}
+    deploy:
+      replicas: 0
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: insightquery-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: atguigu
+      POSTGRES_PASSWORD: 123123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atguigu -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  elasticsearch:
+    build: ./elasticsearch
+    container_name: insightquery-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+      ES_JAVA_OPTS: "-Xms2g -Xmx2g"
+    mem_limit: 4g
+    ports:
+      - "127.0.0.1:9201:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+
+  redis:
+    image: redis:8.10.0-alpine
+    container_name: insightquery-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  doris-fe:
+    image: apache/doris:fe-4.0.7
+    container_name: insightquery-doris-fe
+    hostname: doris-fe
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8031:8030"
+      - "127.0.0.1:9011:9010"
+      - "127.0.0.1:9031:9030"
+    environment:
+      FE_SERVERS: "fe1:172.30.81.2:9010"
+      FE_ID: "1"
+      JACOCO_COVERAGE_OPT: "-Xms1024m -Xmx2048m -XX:-UseContainerSupport"
+    volumes:
+      - doris-fe-meta:/opt/apache-doris/fe/doris-meta
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysql -h127.0.0.1 -P9030 -uroot -e 'SHOW FRONTENDS' >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      doris-network:
+        ipv4_address: 172.30.81.2
+
+  doris-be:
+    image: apache/doris:be-4.0.7
+    container_name: insightquery-doris-be
+    hostname: doris-be
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8041:8040"
+      - "127.0.0.1:9051:9050"
+    environment:
+      FE_SERVERS: "fe1:172.30.81.2:9010"
+      BE_ADDR: "172.30.81.3:9050"
+    volumes:
+      - doris-be-storage:/opt/apache-doris/be/storage
+    depends_on:
+      doris-fe:
+        condition: service_healthy
+      doris-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysql -h172.30.81.2 -P9030 -uatguigu -p123123 -N -e 'SHOW BACKENDS' 2>/dev/null | grep -q '172.30.81.3.*true'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      doris-network:
+        ipv4_address: 172.30.81.3
+
+  doris-init:
+    image: apache/doris:fe-4.0.7
+    container_name: insightquery-doris-init
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        mysql -hdoris-fe -P9030 -uroot <<'SQL'
+        CREATE USER IF NOT EXISTS 'atguigu'@'%' IDENTIFIED BY '123123';
+        ALTER USER IF EXISTS 'atguigu'@'%' IDENTIFIED BY '123123';
+        GRANT SELECT_PRIV, LOAD_PRIV, ALTER_PRIV, CREATE_PRIV, DROP_PRIV ON internal.*.* TO 'atguigu'@'%';
+        GRANT ADMIN_PRIV ON *.*.* TO 'atguigu'@'%';
+        SQL
+    depends_on:
+      doris-fe:
+        condition: service_healthy
+    networks:
+      - doris-network
+
+volumes:
+  postgres-data:
+  es-data:
+  redis-data:
+  doris-fe-meta:
+  doris-be-storage:
+
+networks:
+  doris-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.81.0/24

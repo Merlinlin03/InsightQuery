@@ -1,0 +1,5 @@
+[project]
+name = "insightquery-short-drama-data"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["pymysql>=1.1.2"]

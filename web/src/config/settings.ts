@@ -1,0 +1,47 @@
+// localStorage 中访问令牌的 key
+export const ACCESS_TOKEN_STORAGE_KEY = "dataagent:access-token";
+export const REFRESH_TOKEN_STORAGE_KEY = "dataagent:refresh-token";
+export const AUTH_API_PATHS = {
+  login: "/api/v1/auth/login",
+  refresh: "/api/v1/auth/refresh",
+  logout: "/api/v1/auth/logout",
+  changePassword: "/api/v1/auth/change-password",
+  me: "/api/v1/auth/me",
+} as const;
+
+// 页面路由
+export const ROUTES = {
+  login: "/login",
+  chat: "/chat",
+  admin: "/admin",
+  chatConversation: (conversationId: string) => `/chat/${conversationId}`,
+} as const;
+
+export const CHAT_API_ROUTES = {
+  createConversation: "/api/v1/chat/create",
+  listConversations: "/api/v1/chat/ls",
+  deleteConversations: "/api/v1/chat/delete",
+  updateConversation: "/api/v1/chat/update",
+  deleteDraftConversation: (conversationId: string) => `/api/v1/chat/draft/${conversationId}`,
+  getMessages: (conversationId: string) => `/api/v1/chat/ls/${conversationId}`,
+  getSubagentMessages: (
+    conversationId: string,
+    analysisId: string,
+    agentType: string,
+    sessionId: string,
+    delegationId: string
+  ) =>
+    `/api/v1/chat/${encodeURIComponent(conversationId)}/subagents/${encodeURIComponent(analysisId)}/${encodeURIComponent(agentType)}/${encodeURIComponent(sessionId)}/runs/${encodeURIComponent(delegationId)}/messages`,
+  uploadAttachment: "/api/v1/chat/attachment/upload",
+  getAttachment: "/api/v1/chat/attachment/get",
+  deleteAttachment: "/api/v1/chat/attachment/delete",
+  stream: "/api/v1/chat/stream",
+  resume: (conversationId: string) => `/api/v1/chat/${encodeURIComponent(conversationId)}/resume`,
+  runStatus: (conversationId: string) => `/api/v1/chat/${encodeURIComponent(conversationId)}/run`,
+  runEvents: (conversationId: string) =>
+    `/api/v1/chat/${encodeURIComponent(conversationId)}/events`,
+  stopRun: (conversationId: string) => `/api/v1/chat/${encodeURIComponent(conversationId)}/stop`,
+} as const;
+
+// 开发服务器端口
+export const VITE_SERVER_PORT = 7011;

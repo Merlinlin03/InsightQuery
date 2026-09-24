@@ -1,0 +1,487 @@
+{
+  "tables": [
+    {
+      "name": "dim_market",
+      "role": "dim",
+      "description": "海外短剧市场维度，每个市场一行。",
+      "columns": [
+        {
+          "name": "market_id",
+          "description": "市场ID",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "country_code",
+          "description": "国家代码",
+          "alias": [
+            "国家",
+            "市场",
+            "国家代码"
+          ],
+          "index_values": true
+        },
+        {
+          "name": "language_code",
+          "description": "内容语言代码",
+          "alias": [
+            "语言",
+            "内容语言"
+          ],
+          "index_values": true
+        },
+        {
+          "name": "region",
+          "description": "区域",
+          "alias": [],
+          "index_values": false
+        }
+      ]
+    },
+    {
+      "name": "dim_series",
+      "role": "dim",
+      "description": "合成短剧内容维度，含题材与AI辅助制作分类标签。",
+      "columns": [
+        {
+          "name": "series_id",
+          "description": "短剧ID",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "title",
+          "description": "合成短剧名称",
+          "alias": [
+            "短剧名称",
+            "剧名"
+          ],
+          "index_values": true
+        },
+        {
+          "name": "genre",
+          "description": "题材",
+          "alias": [
+            "题材",
+            "短剧题材"
+          ],
+          "index_values": true
+        },
+        {
+          "name": "content_origin",
+          "description": "内容制作类型，合成分类标签",
+          "alias": [
+            "内容来源",
+            "AI辅助制作"
+          ],
+          "index_values": true
+        },
+        {
+          "name": "release_date",
+          "description": "上线日期",
+          "alias": [],
+          "index_values": false
+        }
+      ]
+    },
+    {
+      "name": "dim_episode",
+      "role": "dim",
+      "description": "短剧集数维度，第三集为付费解锁集。",
+      "columns": [
+        {
+          "name": "episode_id",
+          "description": "剧集ID",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "series_id",
+          "description": "所属短剧ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_series",
+          "reference_c_name": "series_id"
+        },
+        {
+          "name": "episode_no",
+          "description": "集数",
+          "alias": [
+            "集数",
+            "第几集"
+          ],
+          "index_values": false
+        },
+        {
+          "name": "is_paywalled",
+          "description": "是否需付费解锁",
+          "alias": [
+            "付费集",
+            "是否付费解锁"
+          ],
+          "index_values": false
+        }
+      ]
+    },
+    {
+      "name": "dim_user",
+      "role": "dim",
+      "description": "匿名合成用户维度，注册日期和市场用于分群。",
+      "columns": [
+        {
+          "name": "user_id",
+          "description": "匿名合成用户ID",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "market_id",
+          "description": "注册市场ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_market",
+          "reference_c_name": "market_id"
+        },
+        {
+          "name": "signup_date",
+          "description": "注册日期",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "acquisition_type",
+          "description": "自然或推荐来源",
+          "alias": [],
+          "index_values": false
+        }
+      ]
+    },
+    {
+      "name": "fact_episode_view",
+      "role": "fact",
+      "description": "每次短剧播放事件，支持第一集到第二集续看、完播分析。",
+      "columns": [
+        {
+          "name": "view_id",
+          "description": "播放事件ID",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "user_id",
+          "description": "匿名用户ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_user",
+          "reference_c_name": "user_id"
+        },
+        {
+          "name": "episode_id",
+          "description": "剧集ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_episode",
+          "reference_c_name": "episode_id"
+        },
+        {
+          "name": "event_date",
+          "description": "播放UTC日期",
+          "alias": [
+            "日期",
+            "统计日"
+          ],
+          "index_values": false
+        },
+        {
+          "name": "started",
+          "description": "是否开播",
+          "alias": [
+            "开播",
+            "播放开始"
+          ],
+          "index_values": false
+        },
+        {
+          "name": "completed",
+          "description": "是否完播",
+          "alias": [
+            "完播",
+            "播放完成"
+          ],
+          "index_values": false
+        },
+        {
+          "name": "watch_seconds",
+          "description": "观看秒数",
+          "alias": [],
+          "index_values": false
+        }
+      ]
+    },
+    {
+      "name": "fact_paywall_event",
+      "role": "fact",
+      "description": "第三集付费墙展示事件，每条记录对应一次展示。",
+      "columns": [
+        {
+          "name": "event_id",
+          "description": "付费墙事件ID",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "user_id",
+          "description": "匿名用户ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_user",
+          "reference_c_name": "user_id"
+        },
+        {
+          "name": "episode_id",
+          "description": "付费剧集ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_episode",
+          "reference_c_name": "episode_id"
+        },
+        {
+          "name": "event_date",
+          "description": "展示UTC日期",
+          "alias": [
+            "日期",
+            "统计日"
+          ],
+          "index_values": false
+        },
+        {
+          "name": "event_type",
+          "description": "事件类型，当前为impression",
+          "alias": [
+            "付费墙事件类型"
+          ],
+          "index_values": false
+        }
+      ]
+    },
+    {
+      "name": "fact_purchase",
+      "role": "fact",
+      "description": "短剧解锁交易，只有status为success计入收入。",
+      "columns": [
+        {
+          "name": "purchase_id",
+          "description": "解锁交易ID",
+          "alias": [],
+          "index_values": false
+        },
+        {
+          "name": "user_id",
+          "description": "匿名用户ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_user",
+          "reference_c_name": "user_id"
+        },
+        {
+          "name": "episode_id",
+          "description": "解锁剧集ID",
+          "alias": [],
+          "index_values": false,
+          "reference_t_name": "dim_episode",
+          "reference_c_name": "episode_id"
+        },
+        {
+          "name": "event_date",
+          "description": "交易UTC日期",
+          "alias": [
+            "日期",
+            "统计日"
+          ],
+          "index_values": false
+        },
+        {
+          "name": "amount_usd",
+          "description": "交易金额美元",
+          "alias": [
+            "解锁收入",
+            "美元金额"
+          ],
+          "index_values": false
+        },
+        {
+          "name": "status",
+          "description": "success或failed",
+          "alias": [
+            "交易状态",
+            "支付状态"
+          ],
+          "index_values": true
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "开播用户数",
+      "description": "周期内started=1的去重user_id；按剧集分析时先关联dim_episode和dim_series。",
+      "relevant_columns": [
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "user_id"
+        },
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "started"
+        },
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "episode_id"
+        }
+      ],
+      "alias": [
+        "观看用户",
+        "播放用户"
+      ]
+    },
+    {
+      "name": "次集续看率",
+      "description": "同一周期、同一剧中观看第1集的用户里，继续观看第2集的去重用户数 / 观看第1集的去重用户数；按用户匹配，不平均各剧比率。",
+      "relevant_columns": [
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "user_id"
+        },
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "episode_id"
+        },
+        {
+          "t_name": "dim_episode",
+          "c_name": "episode_no"
+        },
+        {
+          "t_name": "dim_episode",
+          "c_name": "series_id"
+        }
+      ],
+      "alias": [
+        "第2集续看率",
+        "二集续看率"
+      ]
+    },
+    {
+      "name": "单集完播率",
+      "description": "sum(completed) / nullif(sum(started),0)，分析时限定相同集数、市场与日期窗口。",
+      "relevant_columns": [
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "completed"
+        },
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "started"
+        },
+        {
+          "t_name": "fact_episode_view",
+          "c_name": "episode_id"
+        }
+      ],
+      "alias": [
+        "完播率"
+      ]
+    },
+    {
+      "name": "付费墙展示用户数",
+      "description": "event_type='impression'的去重user_id；按剧集与市场拆解时保留同一统计粒度。",
+      "relevant_columns": [
+        {
+          "t_name": "fact_paywall_event",
+          "c_name": "user_id"
+        },
+        {
+          "t_name": "fact_paywall_event",
+          "c_name": "event_type"
+        },
+        {
+          "t_name": "fact_paywall_event",
+          "c_name": "episode_id"
+        }
+      ],
+      "alias": [
+        "付费墙曝光用户"
+      ]
+    },
+    {
+      "name": "成功解锁用户数",
+      "description": "status='success'的去重user_id；失败交易不计入。",
+      "relevant_columns": [
+        {
+          "t_name": "fact_purchase",
+          "c_name": "user_id"
+        },
+        {
+          "t_name": "fact_purchase",
+          "c_name": "status"
+        },
+        {
+          "t_name": "fact_purchase",
+          "c_name": "episode_id"
+        }
+      ],
+      "alias": [
+        "付费用户",
+        "解锁用户"
+      ]
+    },
+    {
+      "name": "付费解锁转化率",
+      "description": "同一周期、同一剧集中付费墙展示用户里成功解锁的去重用户数 / 付费墙展示去重用户数；按用户匹配，零分母返回不可计算，不直接平均分组比率。",
+      "relevant_columns": [
+        {
+          "t_name": "fact_purchase",
+          "c_name": "user_id"
+        },
+        {
+          "t_name": "fact_purchase",
+          "c_name": "status"
+        },
+        {
+          "t_name": "fact_paywall_event",
+          "c_name": "user_id"
+        },
+        {
+          "t_name": "fact_paywall_event",
+          "c_name": "event_type"
+        }
+      ],
+      "alias": [
+        "付费墙转化率",
+        "解锁转化率"
+      ]
+    },
+    {
+      "name": "成功解锁收入",
+      "description": "sum(fact_purchase.amount_usd) where status='success'，单位美元；失败交易不计入，按剧集/市场分项金额可加总。",
+      "relevant_columns": [
+        {
+          "t_name": "fact_purchase",
+          "c_name": "amount_usd"
+        },
+        {
+          "t_name": "fact_purchase",
+          "c_name": "status"
+        },
+        {
+          "t_name": "fact_purchase",
+          "c_name": "episode_id"
+        }
+      ],
+      "alias": [
+        "短剧收入",
+        "付费收入",
+        "解锁收入"
+      ]
+    }
+  ]
+}
