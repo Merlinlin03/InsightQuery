@@ -28,5 +28,4 @@ htmlcov/
 *.pfx
 celerybeat-schedule*
 .deepagents/workspaces/
-dbmock
 SPEC.md
